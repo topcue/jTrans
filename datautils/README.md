@@ -79,7 +79,7 @@ python3 run.py
         return nx_graph 
     ```
 - pair data
-    the pair data is organized by the groudtruth (paired functions compiled by diferent optimization)
+    the pair data is organized by the groundtruth (paired functions compiled by diferent optimization)
     ```python
     pair_data = {
             'foo': [
