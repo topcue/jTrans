@@ -31,7 +31,7 @@ if __name__ == '__main__':
 	pool = multiprocessing.Pool(processes=8)
 	for target in target_list:
 		filename = target.split('/')[-1]
-		filename_strip = filename  + '.strip'
+		filename_strip = filename + '.strip'
 		ida_input = os.path.join(strip_path, filename_strip)
 		os.system(f"strip -s {target} -o {ida_input}")
 		print(f"strip -s {target} -o {ida_input}")
