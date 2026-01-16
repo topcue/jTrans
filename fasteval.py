@@ -27,8 +27,8 @@ def eval_O(ebds,TYPE1,TYPE2):
 	Recall_AT_1=[]
 
 	for idx, (anchor,pos) in enumerate(tqdm(dataloader)):
-		anchor = anchor.cuda()
-		pos =pos.cuda()
+		anchor = anchor.to(device)
+		pos = pos.to(device)
 		if anchor.shape[0]==POOLSIZE:
 			for i in range(len(anchor)):    # check every vector of (vA,vB)
 				vA=anchor[i:i+1]  #pos[i]
@@ -62,8 +62,10 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="jTrans-FastEval")
 	parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="experiment to be evaluated")
 	parser.add_argument("--poolsize", type=int, default=32, help="size of the function pool")
+	parser.add_argument("--device", type=str, default="cpu")
 	args = parser.parse_args()
 
+	device = torch.device(args.device)
 	POOLSIZE=args.poolsize
 	ff=open(args.experiment_path,'rb')
 	ebds=pickle.load(ff)
@@ -77,3 +79,5 @@ if __name__ == '__main__':
 	eval_O(ebds,'O1','O3')
 	eval_O(ebds,'O2','Os')
 	eval_O(ebds,'O2','O3')
+
+# EOF
