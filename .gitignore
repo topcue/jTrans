@@ -3,6 +3,8 @@ env/models/
 env/experiments.tar.gz
 env/experiments/
 
+env/wsl_venv/
+
 datautils/__pycache__/
 __pycache__/
 
