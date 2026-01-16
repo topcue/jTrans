@@ -36,7 +36,7 @@ def pairdata(data_dir):
             print(name, len(func_list))
             binary_func_list.append(func_list)
             move(src, dst) # move file into proj dir
-        
+
         final_index = reduce(lambda x,y : set(x) & set(y), binary_func_list)
         print('all', len(final_index))
 

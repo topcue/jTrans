@@ -82,7 +82,7 @@ def load_unpair_data(datapath,filt=None,alldata=True,convert_jump=True,opt=None,
             fp.write(func_str+"\n")
 
 def load_paired_data(datapath,filt=None,alldata=True,convert_jump=True,opt=None,add_ebd=False):
-   
+
     dataset = DatasetBase(datapath,filt,alldata, opt=opt)
     functions=[]
     func_emb_data=[]
@@ -92,7 +92,7 @@ def load_paired_data(datapath,filt=None,alldata=True,convert_jump=True,opt=None,
         if add_ebd:
             func_emb_data.append({'proj':i[0],'funcname':i[1]})
         for o in opt:
-            if i[2].get(o):                   
+            if i[2].get(o):
                 f=i[2][o]
                 func_str=gen_funcstr(f,convert_jump)
                 if len(func_str)>0:

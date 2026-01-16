@@ -1,12 +1,12 @@
 # jTrans
-This repo is the official code of **jTrans: Jump-Aware Transformer for Binary Code Similarity Detection**. 
+This repo is the official code of **jTrans: Jump-Aware Transformer for Binary Code Similarity Detection**.
 
 ![Illustrating the performance of the proposed jTrans](/figures/poolsizecompare.png)
 
 ## News
-* \[2023/3/2\] Update an writeup on using jTrans for binary diffing in [HackerGame2022](https://github.com/USTC-Hackergame/hackergame2022-writeups/tree/master/official/%E7%81%AB%E7%9C%BC%E9%87%91%E7%9D%9B%E7%9A%84%E5%B0%8F%20E). 
+* \[2023/3/2\] Update an writeup on using jTrans for binary diffing in [HackerGame2022](https://github.com/USTC-Hackergame/hackergame2022-writeups/tree/master/official/%E7%81%AB%E7%9C%BC%E9%87%91%E7%9D%9B%E7%9A%84%E5%B0%8F%20E).
 * \[2022/7/7\] We update BinaryCorp with the original [binaries](https://cloud.vul337.team:8443/s/W57ZWXxn7zSKG4q).
-* \[2022/6/18\] We release the code and models of jTrans. 
+* \[2022/6/18\] We release the code and models of jTrans.
 * \[2022/6/9\] We release the preprocessing code and [BinaryCorp](https://cloud.vul337.team:8443/s/cxnH8DfZTADLKCs), the dataset we used in our paper.
 * \[2022/5/26\] jTrans is now on [ArXiv](https://arxiv.org/pdf/2205.12713.pdf).
 
@@ -68,7 +68,7 @@ python fasteval.py
 Make sure you have IDA pro 7.5+ and following the instructions at [datautils](datautils/README.md). After extracting features of your binaries, you can try jTrans on them such as the usage at [eval_save.py](./eval_save.py).
 
 ## Dataset
-- We present a new large-scale and diversified dataset, [BinaryCorp](https://cloud.vul337.team:8443/s/cxnH8DfZTADLKCs), for the task of binary code similarity detection. 
+- We present a new large-scale and diversified dataset, [BinaryCorp](https://cloud.vul337.team:8443/s/cxnH8DfZTADLKCs), for the task of binary code similarity detection.
 - The description of the dataset can be found at [here](datautils/README.md) and we give an [example](datautils/playdata.py) for using BinaryCorp.
 - If you need to use features that we do not provide in advance, such as call graphs, you can download the raw binaries from [here](https://cloud.vul337.team:8443/s/W57ZWXxn7zSKG4q).
 

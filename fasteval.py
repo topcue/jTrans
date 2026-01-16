@@ -38,7 +38,7 @@ def eval_O(ebds,TYPE1,TYPE2):
                 for j in range(len(pos)):
                     if y[j]==i:
                         posi=j+1
-                        break 
+                        break
                 if posi==1:
                     Recall_AT_1.append(1)
                 else:
@@ -48,12 +48,12 @@ def eval_O(ebds,TYPE1,TYPE2):
     print(TYPE1,TYPE2,'Recall@1: ', np.array(Recall_AT_1).mean())
     return np.array(Recall_AT_1).mean()
 
-class FunctionDataset_Fast(torch.utils.data.Dataset): 
-    def __init__(self,arr1,arr2): 
+class FunctionDataset_Fast(torch.utils.data.Dataset):
+    def __init__(self,arr1,arr2):
         self.arr1=arr1
         self.arr2=arr2
         assert(len(arr1)==len(arr2))
-    def __getitem__(self, idx):            
+    def __getitem__(self, idx):
         return self.arr1[idx].squeeze(0),self.arr2[idx].squeeze(0)
     def __len__(self):
         return len(self.arr1)

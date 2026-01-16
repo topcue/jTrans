@@ -130,7 +130,7 @@ if __name__ == '__main__':
     logger.info("Done ...")
     tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
     logger.info("Tokenizer Done ...")
-   
+
     logger.info("Preparing Datasets ...")
     ft_valid_dataset=FunctionDataset_CL(tokenizer,args.dataset_path,None,True,opt=['O0', 'O1', 'O2', 'O3', 'Os'], add_ebd=True, convert_jump_addr=True)
     for i in tqdm(range(len(ft_valid_dataset.datas))):

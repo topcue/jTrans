@@ -18,7 +18,7 @@ def seq_to_token(token_id,seq,UNK):
             ret.append(re)
         else:
             cnt+=1
-            ret.append(UNK)       
+            ret.append(UNK)
     return ret
 
 def normalize(opcode):
