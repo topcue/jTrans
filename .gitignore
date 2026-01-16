@@ -3,3 +3,6 @@ env/models/
 env/experiments.tar.gz
 env/experiments/
 
+datautils/__pycache__/
+__pycache__/
+
