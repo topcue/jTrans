@@ -12,8 +12,4 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 python -m pip install simpletransformers networkx pyelftools
 
-# source ~/miniconda3/bin/activate
-
-# conda activate jtrans
-
 # EOF
