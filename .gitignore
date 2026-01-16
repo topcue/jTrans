@@ -1,2 +1,5 @@
-models/
-experiments/
+env/models.tar.gz
+env/models/
+env/experiments.tar.gz
+env/experiments/
+
