@@ -40,9 +40,12 @@ def getTarget(path):
 	for root, _, files in os.walk(path):
 		for file in files:
 			target.append(os.path.join(root, file))
-
 	return target
 
+
+def run_ida(cmd, out_path, err_path):
+	with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
+		return subprocess.call(cmd, stdout=out_f, stderr=err_f)
 
 #! WSL: pip install networkx tqdm
 def main():
@@ -54,7 +57,7 @@ def main():
 	os.system(f"mkdir -p {STRIP_PATH} {IDB_PATH} {LOG_PATH} {SAVE_ROOT}")
 
 	pool = multiprocessing.Pool(processes=8)
-	for target in target_list[:2]:
+	for target in target_list:
 		filename = target.split('/')[-1]
 		filename_strip = filename + '.strip'
 		ida_input = os.path.join(STRIP_PATH, filename_strip)
@@ -75,13 +78,19 @@ def main():
 		if DEBUG:
 			print(f"[DEBUG] cmd_str: {cmd_str}")
 
+		#! For debug
+		out_path = os.path.join(LOG_PATH, f"{filename}.ida.stdout.txt")
+		err_path = os.path.join(LOG_PATH, f"{filename}.ida.stderr.txt")
+
 		# os.system(cmd_str)
-		pool.apply_async(subprocess.call, args=(cmd,))
+		pool.apply_async(run_ida, args=(cmd, out_path, err_path))
 	pool.close()
 	pool.join()
+	print("[*] Features Extracting Done")
 
-	print('[*] Features Extracting Done')
+	print("[*] Saving..")
 	pairdata(SAVE_ROOT)
+
 	end = time.time()
 	print(f"[*] Time Cost: {end - start} seconds")
 
