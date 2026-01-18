@@ -31,8 +31,9 @@ IDA_SCRIPT_PATH = os.path.join(cur_script_dir_path, "process.py")
 
 LOG_PATH = "log"
 IDB_PATH = os.path.join(BASE_PATH, "idb")
-
 SAVE_ROOT = os.path.join(BASE_PATH, "extract")
+
+NUM_JOBS = 24
 
 
 def getTarget(path):
@@ -44,66 +45,88 @@ def getTarget(path):
 
 
 def run_ida(cmd, out_path=None, err_path=None, debug=False):
-    if debug:
-        with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
-            return subprocess.call(cmd, stdout=out_f, stderr=err_f)
-    else:
-        # Discard stdout/stderr
-        return subprocess.call(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+	if debug:
+		with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
+			return subprocess.call(cmd, stdout=out_f, stderr=err_f)
+	else:
+		# Discard stdout/stderr
+		return subprocess.call(
+			cmd,
+			stdout=subprocess.DEVNULL,
+			stderr=subprocess.DEVNULL,
+		)
 
-#! WSL: pip install networkx tqdm
+
+def strip_one(target_path: str) -> tuple[str, str, int]:
+	filename = os.path.basename(target_path)
+	stripped_path = os.path.join(STRIP_PATH, filename + ".strip")
+
+	# Use subprocess to get a real return code
+	# strip -s <in> -o <out>
+	cmd_strip = f"strip -s {target_path} -o {stripped_path}"
+	ret = subprocess.call(cmd_strip.split(' '))
+	return (target_path, stripped_path, ret)
+
+
+def strip_all_parallel(target_list, num_jobs: int):
+	results = []
+	with multiprocessing.Pool(processes=num_jobs) as pool:
+		for orig, stripped, ret in pool.imap_unordered(strip_one, target_list, chunksize=16):
+			if ret != 0:
+				# If you want strict failure, raise instead.
+				# raise RuntimeError(f"strip failed: {orig} (ret={ret})")
+				print(f"[WARN] strip failed: {orig} (ret={ret})")
+				continue
+			results.append(stripped)
+	return results
+
+
 def main():
 	DEBUG = False
 
+	os.makedirs(STRIP_PATH, exist_ok=True)
+	os.makedirs(IDB_PATH,   exist_ok=True)
+	os.makedirs(LOG_PATH,   exist_ok=True)
+	os.makedirs(SAVE_ROOT, exist_ok=True)
+
 	start = time.time()
+
 	target_list = getTarget(DATA_ROOT)
 
-	os.system(f"mkdir -p {STRIP_PATH} {IDB_PATH} {LOG_PATH} {SAVE_ROOT}")
+	# Stage 1) strip in parallel
+	stripped_list = strip_all_parallel(target_list, num_jobs=NUM_JOBS)
 
-	pool = multiprocessing.Pool(processes=8)
-	for target in target_list:
-		filename = target.split('/')[-1]
-		filename_strip = filename + '.strip'
-		ida_input = os.path.join(STRIP_PATH, filename_strip)
-
-		if DEBUG:
-			print(f"[DEBUG] filename: {filename}")
-			print(f"[DEBUG] ida_input: {ida_input}")
-
-		cmd_strip = f"strip -s {target} -o {ida_input}"
-		os.system(cmd_strip)
+	# Stage 2) run IDA in parallel on stripped files
+	pool = multiprocessing.Pool(processes=NUM_JOBS)
+	for ida_input in stripped_list:
+		filename_strip = os.path.basename(ida_input)          # e.g., xxx.strip
+		filename = filename_strip.replace(".strip", "")       # e.g., xxx
 
 		ida_input_win = wsl_to_win_path(ida_input)
 		IDB_PATH_WIN = wsl_to_win_path(IDB_PATH)
 
-		cmd_str = f"{IDA_PATH} -L{LOG_PATH}/{filename}.log -c -A -S{IDA_SCRIPT_PATH} -o{IDB_PATH_WIN}/{filename}.idb {ida_input_win}"
-		cmd = cmd_str.split(' ')
+		cmd_str = (
+			f"{IDA_PATH} -L{LOG_PATH}/{filename}.log "
+			f"-c -A -S{IDA_SCRIPT_PATH} "
+			f"-o{IDB_PATH_WIN}/{filename}.idb {ida_input_win}"
+		)
+		cmd = cmd_str.split(" ")
 
-		if DEBUG:
-			print(f"[DEBUG] cmd_str: {cmd_str}")
-
-		#! For debug
 		out_path = os.path.join(LOG_PATH, f"{filename}.ida.stdout.txt")
 		err_path = os.path.join(LOG_PATH, f"{filename}.ida.stderr.txt")
 
-		# os.system(cmd_str)
 		pool.apply_async(run_ida, args=(cmd, out_path, err_path, DEBUG))
 	pool.close()
 	pool.join()
-	print("[*] Features Extracting Done")
 
+	print("[*] Features Extracting Done")
 	print("[*] Saving..")
 	pairdata(SAVE_ROOT)
 
 	end = time.time()
 	print(f"[*] Time Cost: {end - start} seconds")
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 	main()
 
 # EOF
