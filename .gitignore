@@ -5,6 +5,8 @@ env/experiments/
 
 env/wsl_venv/
 
+datautils/log
+
 datautils/__pycache__/
 __pycache__/
 
