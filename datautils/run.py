@@ -91,7 +91,7 @@ def main():
 		err_path = os.path.join(LOG_PATH, f"{filename}.ida.stderr.txt")
 
 		# os.system(cmd_str)
-		pool.apply_async(run_ida, args=(cmd, out_path, err_path))
+		pool.apply_async(run_ida, args=(cmd, out_path, err_path, DEBUG))
 	pool.close()
 	pool.join()
 	print("[*] Features Extracting Done")
