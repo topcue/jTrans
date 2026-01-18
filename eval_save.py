@@ -19,7 +19,7 @@ import time
 import data
 from datautils.playdata import DatasetBase as DatasetBase
 import re
-
+from datetime import datetime
 
 WANDB = True
 
@@ -28,7 +28,7 @@ class BinBertModel(BertModel):
 	def __init__(self, config, add_pooling_layer=True):
 		super().__init__(config)
 		self.config = config
-		self.embeddings.position_embeddings=self.embeddings.word_embeddings
+		self.embeddings.position_embeddings = self.embeddings.word_embeddings
 
 
 def get_logger(name):
@@ -51,7 +51,7 @@ def eval(model, args, valid_set, logger):
 	logger.info("Finished Initialization...")
 	valid_dataloader = DataLoader(valid_set, batch_size=args.eval_batch_size, num_workers=24, shuffle=True)
 	global_steps = 0
-	etc=0
+	etc = 0
 	logger.info(f"Doing Evaluation ...")
 	mrr = finetune_eval(model, valid_dataloader)
 	logger.info(f"Evaluate: mrr={mrr}")
@@ -65,52 +65,53 @@ def finetune_eval(net, data_loader):
 	net.eval()
 	print(net)
 	with torch.no_grad():
-		avg=[]
-		gt=[]
-		cons=[]
+		avg = []
+		gt = []
+		cons = []
 		eval_iterator = tqdm(data_loader)
-		for i, (seq1,seq2,seq3,mask1,mask2,mask3) in enumerate(eval_iterator):
-				input_ids1, attention_mask1= seq1.cuda(),mask1.cuda()
-				input_ids2, attention_mask2= seq2.cuda(),mask2.cuda()
+		for i, (seq1, seq2, seq3, mask1, mask2, mask3) in enumerate(eval_iterator):
+				input_ids1, attention_mask1= seq1.cuda(), mask1.cuda()
+				input_ids2, attention_mask2= seq2.cuda(), mask2.cuda()
 				print(input_ids1.shape)
 				print(attention_mask1.shape)
-				anchor,pos=0,0
+				anchor, pos = 0, 0
 
-				output=net(input_ids=input_ids1,attention_mask=attention_mask1)
-				#anchor=output.last_hidden_state[:,0:1,:]
-				anchor=output.pooler_output
-				output=net(input_ids=input_ids2,attention_mask=attention_mask2)
-				#pos=output.last_hidden_state[:,0:1,:]
-				pos=output.pooler_output
-				ans=0
-				for k in range(len(anchor)):    # check every vector of (vA,vB)
-					vA=anchor[k:k+1].cpu()
-					sim=[]
+				output = net(input_ids=input_ids1, attention_mask=attention_mask1)
+				# anchor = output.last_hidden_state[:, 0:1, :]
+				anchor = output.pooler_output
+				output = net(input_ids=input_ids2, attention_mask=attention_mask2)
+				# pos = output.last_hidden_state[:, 0:1, :]
+				pos = output.pooler_output
+				ans = 0
+				for k in range(len(anchor)):    # check every vector of (vA, vB)
+					vA = anchor[k:k+1].cpu()
+					sim = []
 					for j in range(len(pos)):
-						vB=pos[j:j+1].cpu()
-						#vB=vB[0]
-						AB_sim=F.cosine_similarity(vA, vB).item()
+						vB = pos[j:j+1].cpu()
+						# vB = vB[0]
+						AB_sim = F.cosine_similarity(vA, vB).item()
 						sim.append(AB_sim)
-						if j!=k:
+						if j!= k:
 							cons.append(AB_sim)
-					sim=np.array(sim)
-					y=np.argsort(-sim)
-					posi=0
+					sim = np.array(sim)
+					y = np.argsort(-sim)
+					posi = 0
 					for j in range(len(pos)):
-						if y[j]==k:
-							posi=j+1
+						if y[j] == k:
+							posi = j+1
 
 					gt.append(sim[k])
 
-					ans+=1/posi
+					ans += 1 / posi
 
-				ans=ans/len(anchor)
+				ans = ans / len(anchor)
 				avg.append(ans)
-				print("now mrr ",np.mean(np.array(avg)))
-		fi=open("logft.txt","a")
-		print("MRR ",np.mean(np.array(avg)),file=fi)
-		print("FINAL MRR ",np.mean(np.array(avg)))
+				print("now mrr ", np.mean(np.array(avg)))
+		fi = open("logft.txt", "a")
+		print("MRR ", np.mean(np.array(avg)), file=fi)
+		print("FINAL MRR ", np.mean(np.array(avg)))
 		fi.close()
+
 		return np.mean(np.array(avg))
 
 
@@ -124,9 +125,8 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	from datetime import datetime
 	now = datetime.now() # current date and time
-	TIMESTAMP="%Y%m%d%H%M"
+	TIMESTAMP = "%Y%m%d%H%M"
 	tim = now.strftime(TIMESTAMP)
 
 	# logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}")
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 	model = BinBertModel.from_pretrained(args.model_path)
 
 	model.eval()
-	
+
 	device = torch.device(args.device)
 	model.to(device)
 
@@ -148,25 +148,25 @@ if __name__ == '__main__':
 	logger.info("Tokenizer Done ...")
 
 	logger.info("Preparing Datasets ...")
-	ft_valid_dataset=FunctionDataset_CL(tokenizer,args.dataset_path,None,True,opt=['O0', 'O1', 'O2', 'O3', 'Os'], add_ebd=True, convert_jump_addr=True)
+	ft_valid_dataset = FunctionDataset_CL(tokenizer, args.dataset_path, None, True, opt=['O0', 'O1', 'O2', 'O3', 'Os'], add_ebd=True, convert_jump_addr=True)
 	for i in tqdm(range(len(ft_valid_dataset.datas))):
-		pairs=ft_valid_dataset.datas[i]
-		for j in ['O0','O1','O2','O3','Os']:
+		pairs = ft_valid_dataset.datas[i]
+		for j in ['O0', 'O1', 'O2', 'O3', 'Os']:
 			if ft_valid_dataset.ebds[i].get(j) is not None:
-				idx=ft_valid_dataset.ebds[i][j]
-				ret1=tokenizer([pairs[idx]], add_special_tokens=True,max_length=512,padding='max_length',truncation=True,return_tensors='pt') #tokenize them
-				seq1=ret1['input_ids']
-				mask1=ret1['attention_mask']
-				# input_ids1, attention_mask1= seq1.cuda(),mask1.cuda()
+				idx = ft_valid_dataset.ebds[i][j]
+				ret1 = tokenizer([pairs[idx]], add_special_tokens=True, max_length=512, padding='max_length', truncation=True, return_tensors='pt') # tokenize them
+				seq1 = ret1['input_ids']
+				mask1 = ret1['attention_mask']
+				# input_ids1, attention_mask1 = seq1.cuda(), mask1.cuda()
 				input_ids1, attention_mask1 = seq1.to(device), mask1.to(device)
-				
-				output=model(input_ids=input_ids1,attention_mask=attention_mask1)
-				anchor=output.pooler_output
-				ft_valid_dataset.ebds[i][j]=anchor.detach().cpu()
+
+				output = model(input_ids=input_ids1, attention_mask=attention_mask1)
+				anchor = output.pooler_output
+				ft_valid_dataset.ebds[i][j] = anchor.detach().cpu()
 
 	logger.info("ebds start writing")
-	fi=open(args.experiment_path,'wb')
-	pickle.dump(ft_valid_dataset.ebds,fi)
+	fi = open(args.experiment_path, 'wb')
+	pickle.dump(ft_valid_dataset.ebds, fi)
 	fi.close()
 
 # EOF
