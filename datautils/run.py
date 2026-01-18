@@ -4,45 +4,89 @@ import multiprocessing
 import time
 from util.pairdata import pairdata
 
-ida_path = "./ida/idat64"
-work_dir = os.path.abspath('.')
-dataset_dir = './dataset/'
-strip_path = "./dataset_strip/"
-script_path = f"./process.py"
-SAVE_ROOT = "./extract"
 
-def getTarget(path, prefixfilter=None):
+WSL_PREFIX = "/home/user/win_workspace"
+WIN_PREFIX = "C:/Users/user/workspace"
+
+def wsl_to_win_path(p):
+	if p == WSL_PREFIX or p.startswith(WSL_PREFIX + "/"):
+		return WIN_PREFIX + p[len(WSL_PREFIX):]
+	return p
+
+def win_to_wsl_path(p):
+	if p == WIN_PREFIX or p.startswith(WIN_PREFIX + "/"):
+		return WSL_PREFIX + p[len(WIN_PREFIX):]
+	return p
+
+
+IDA_PATH = "/mnt/c/Users/user/workspace/IDA/idat64.exe"
+
+BASE_PATH = "/home/user/win_workspace/storage/jtrans"
+
+DATA_ROOT = os.path.join(BASE_PATH, "dataset")
+STRIP_PATH = os.path.join(BASE_PATH, "dataset_strip")
+
+cur_script_dir_path = os.path.dirname(os.path.abspath(__file__))
+IDA_SCRIPT_PATH = os.path.join(cur_script_dir_path, "process.py")
+
+LOG_PATH = "log"
+IDB_PATH = os.path.join(BASE_PATH, "idb")
+
+SAVE_ROOT = os.path.join(BASE_PATH, "extract")
+
+
+def getTarget(path):
 	target = []
-	for root, dirs, files in os.walk(path):
+	for root, _, files in os.walk(path):
 		for file in files:
-			if prefixfilter is None:
-				target.append(os.path.join(root, file))
-			else:
-				for prefix in prefixfilter:
-					if file.startswith(prefix):
-						target.append(os.path.join(root, file))
+			target.append(os.path.join(root, file))
+
 	return target
 
-if __name__ == '__main__':
-	# prefixfilter = ['libcap-git-setcap']
+
+#! WSL: pip install networkx tqdm
+def main():
+	DEBUG = False
+
 	start = time.time()
-	target_list = getTarget(dataset_dir)
+	target_list = getTarget(DATA_ROOT)
+
+	os.system(f"mkdir -p {STRIP_PATH} {IDB_PATH} {LOG_PATH} {SAVE_ROOT}")
 
 	pool = multiprocessing.Pool(processes=8)
-	for target in target_list:
+	for target in target_list[:2]:
 		filename = target.split('/')[-1]
 		filename_strip = filename + '.strip'
-		ida_input = os.path.join(strip_path, filename_strip)
-		os.system(f"strip -s {target} -o {ida_input}")
-		print(f"strip -s {target} -o {ida_input}")
+		ida_input = os.path.join(STRIP_PATH, filename_strip)
 
-		cmd_str = f'{ida_path} -Llog/{filename}.log -c -A -S{script_path} -oidb/{filename}.idb {ida_input}'
-		print(cmd_str)
-		cmd = [ida_path, f'-Llog/{filename}.log', '-c', '-A', f'-S{script_path}', f'-oidb/{filename}.idb', f'{ida_input}']
+		if DEBUG:
+			print(f"[DEBUG] filename: {filename}")
+			print(f"[DEBUG] ida_input: {ida_input}")
+
+		cmd_strip = f"strip -s {target} -o {ida_input}"
+		os.system(cmd_strip)
+
+		ida_input_win = wsl_to_win_path(ida_input)
+		IDB_PATH_WIN = wsl_to_win_path(IDB_PATH)
+
+		cmd_str = f"{IDA_PATH} -L{LOG_PATH}/{filename}.log -c -A -S{IDA_SCRIPT_PATH} -o{IDB_PATH_WIN}/{filename}.idb {ida_input_win}"
+		cmd = cmd_str.split(' ')
+
+		if DEBUG:
+			print(f"[DEBUG] cmd_str: {cmd_str}")
+
+		# os.system(cmd_str)
 		pool.apply_async(subprocess.call, args=(cmd,))
 	pool.close()
 	pool.join()
+
 	print('[*] Features Extracting Done')
 	pairdata(SAVE_ROOT)
 	end = time.time()
 	print(f"[*] Time Cost: {end - start} seconds")
+
+
+if __name__ == '__main__':
+	main()
+
+# EOF

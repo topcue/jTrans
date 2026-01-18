@@ -1,3 +1,15 @@
+import sys
+
+sys.path.insert(0, r"C:\Users\user\workspace\IDA-python\jtrans\Lib")
+sys.path.insert(0, r"C:\Users\user\workspace\IDA-python\jtrans\libs")
+sys.path.insert(0, r"C:\Users\user\workspace\IDA-python\jtrans")
+sys.path.insert(0, r"C:\Users\user\workspace\IDA-python\jtrans\Lib\site-packages")
+
+#! =============================================================================
+
+import os
+from collections import defaultdict
+
 import idc
 import idautils
 import idaapi
@@ -6,19 +18,43 @@ import binaryai
 import networkx as nx
 from util.base import Binarybase
 
-SAVEROOT = "./extract" # dir of pickle files saved by IDA
-DATAROOT = "./dataset" # dir of binaries (not stripped)
+WSL_PREFIX = "/home/user/win_workspace"
+WIN_PREFIX = "C:/Users/user/workspace"
+
+def wsl_to_win_path(p):
+	if p == WSL_PREFIX or p.startswith(WSL_PREFIX + "/"):
+		return WIN_PREFIX + p[len(WSL_PREFIX):]
+	return p
+
+def win_to_wsl_path(p):
+	if p == WIN_PREFIX or p.startswith(WIN_PREFIX + "/"):
+		return WSL_PREFIX + p[len(WIN_PREFIX):]
+	return p
+
+# SAVEROOT = "./extract" # dir of pickle files saved by IDA
+# DATAROOT = "./dataset" # dir of binaries (not stripped)
+
+BASE_PATH = "/home/user/win_workspace/storage/jtrans"
+
+DATA_ROOT = os.path.join(BASE_PATH, "dataset")
+DATA_ROOT_WIN = wsl_to_win_path(DATA_ROOT)
+
+SAVE_ROOT = os.path.join(BASE_PATH, "extract")
+SAVE_ROOT_WIN = wsl_to_win_path(SAVE_ROOT)
+
 
 class BinaryData(Binarybase):
 	def __init__(self, unstrip_path):
 		super(BinaryData, self).__init__(unstrip_path)
 		self.fix_up()
-	
+
+
 	def fix_up(self):
 		for addr in self.addr2name:
 			# incase some functions' instructions are not recognized by IDA
 			idc.create_insn(addr)  
 			idc.add_func(addr) 
+
 
 	def get_asm(self, func):
 		instGenerator = idautils.FuncItems(func)
@@ -27,12 +63,14 @@ class BinaryData(Binarybase):
 			asm_list.append(idc.GetDisasm(inst))
 		return asm_list
 
+
 	def get_rawbytes(self, func):
 		instGenerator = idautils.FuncItems(func)
 		rawbytes_list = b""
 		for inst in instGenerator:
 			rawbytes_list += idc.get_bytes(inst, idc.get_item_size(inst))
 		return rawbytes_list
+
 
 	def get_cfg(self, func):
 
@@ -68,8 +106,10 @@ class BinaryData(Binarybase):
 				nx_graph.add_edge(block.start_ea, succ.start_ea)
 		return nx_graph  
 
+
 	def get_binai_feature(self, func):
 		return binaryai.ida.get_func_feature(func)
+
 
 	def extract_all(self):
 		for func in idautils.Functions():
@@ -82,23 +122,39 @@ class BinaryData(Binarybase):
 			bai_feature = self.get_binai_feature(func)
 			yield (self.addr2name[func], func, asm_list, rawbytes_list, cfg, bai_feature)
 
-if __name__ == "__main__":
-	import os
-	from collections import defaultdict
 
-	assert os.path.exists(DATAROOT), "DATAROOT does not exist"
-	assert os.path.exists(SAVEROOT), "SAVEROOT does not exist"
+def main():
+	DEBUG = True
+
+	assert os.path.exists(DATA_ROOT_WIN), "DATA_ROOT does not exist"
+	assert os.path.exists(SAVE_ROOT_WIN), "SAVE_ROOT does not exist"
 
 	binary_abs_path = idc.get_input_file_path()
-	filename = binary_abs_path.split('/')[-1][:-6]
-	unstrip_path = os.path.join(DATAROOT, filename)
+	if DEBUG:
+		print(f"[DEBUG] binary_abs_path: {binary_abs_path}")
+
+	filename = binary_abs_path.split('\\')[-1].replace(".strip", '')
+	unstrip_path = os.path.join(DATA_ROOT_WIN, filename)
+
+	if DEBUG:
+		print(f"[DEBUG] DATA_ROOT_WIN: {DATA_ROOT_WIN}")
+		print(f"[DEBUG] DATA_ROOT: {DATA_ROOT}")
+		print(f"[DEBUG] filename: {filename}")
+		print(f"[DEBUG] unstrip_path: {unstrip_path}")
+	
 	idc.auto_wait()
 	binary_data = BinaryData(unstrip_path)
 
 	saved_dict = defaultdict(lambda: list)
-	saved_path = os.path.join(SAVEROOT, filename + "_extract.pkl") # unpair data
+	saved_path = os.path.join(SAVE_ROOT_WIN, filename + "_extract.pkl") # unpair data
 	with open(saved_path, 'wb') as f:
 		for func_name, func, asm_list, rawbytes_list, cfg, bai_feature in binary_data.extract_all():
 			saved_dict[func_name] = [func, asm_list, rawbytes_list, cfg, bai_feature]
 		pickle.dump(dict(saved_dict), f)
 	idc.qexit(0) # exit IDA
+
+
+if __name__ == "__main__":
+	main()
+
+# EOF
