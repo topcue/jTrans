@@ -23,7 +23,7 @@ from datetime import datetime
 
 WANDB = True
 
-NUM_JOBS = 32
+NUM_JOBS = os.cpu_count()
 
 class BinBertModel(BertModel):
 	def __init__(self, config, add_pooling_layer=True):

@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 
-NUM_JOBS = 32
+NUM_JOBS = os.cpu_count()
 
 class FunctionDataset_Fast(torch.utils.data.Dataset):
 	def __init__(self, arr1, arr2):
