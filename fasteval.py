@@ -69,7 +69,13 @@ def eval_O(ebds, TYPE1, TYPE2, device, POOLSIZE=32):
 
 def main():
 	parser = argparse.ArgumentParser(description="jTrans-FastEval")
-	parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="experiment to be evaluated")
+	# parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="experiment to be evaluated")
+	parser.add_argument(
+		"--input_emb_path",
+		type=str,
+		default="./experiments/BinaryCorp-3M/jTrans.pkl",
+		help="Input path to a pickle file containing precomputed function embeddings (ebds), produced by eval_save.py."
+	)
 	parser.add_argument("--poolsize", type=int, default=32, help="size of the function pool")
 	parser.add_argument("--device", type=str, default="cpu")
 	args = parser.parse_args()
@@ -77,7 +83,7 @@ def main():
 	device = torch.device(args.device)
 	#! Pool size defines the retrieval evaluation difficulty and directly affects metrics.
 	POOLSIZE = args.poolsize
-	ff = open(args.experiment_path,'rb')
+	ff = open(args.input_emb_path,'rb')
 	ebds = pickle.load(ff)
 	ff.close()
 

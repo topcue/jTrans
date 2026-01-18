@@ -120,7 +120,13 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="jTrans-EvalSave")
 	parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
 	parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
-	parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="Path to the experiment")
+	# parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="Path to the experiment")
+	parser.add_argument(
+		"--output_emb_path",
+		type=str,
+		default="./experiments/BinaryCorp-3M/jTrans.pkl",
+		help="Output path to save precomputed function embeddings (pickle). This file is later consumed by fasteval.py."
+	)
 	parser.add_argument("--tokenizer", type=str, default='./jtrans_tokenizer/')
 	parser.add_argument("--device", type=str, default="cpu")
 
@@ -130,9 +136,9 @@ if __name__ == '__main__':
 	TIMESTAMP = "%Y%m%d%H%M"
 	tim = now.strftime(TIMESTAMP)
 
-	# logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}")
+	# logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.output_emb_path}_{tim}")
 	os.makedirs("logs", exist_ok=True)
-	raw = f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}"
+	raw = f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.output_emb_path}_{tim}"
 	safe = re.sub(r"[^A-Za-z0-9._-]+", "_", raw)
 	logger = get_logger(os.path.join("logs", safe + ".log"))
 
@@ -166,7 +172,7 @@ if __name__ == '__main__':
 				ft_valid_dataset.ebds[i][j] = anchor.detach().cpu()
 
 	logger.info("ebds start writing")
-	fi = open(args.experiment_path, 'wb')
+	fi = open(args.output_emb_path, 'wb')
 	pickle.dump(ft_valid_dataset.ebds, fi)
 	fi.close()
 
