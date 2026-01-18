@@ -4,7 +4,8 @@ import multiprocessing
 import time
 from util.pairdata import pairdata
 
-
+#! $ mkdir -p /mnt/c/Users/user/workspace
+#! $ ln -s /mnt/c/Users/user/workspace /home/user/win_workspace
 WSL_PREFIX = "/home/user/win_workspace"
 WIN_PREFIX = "C:/Users/user/workspace"
 
