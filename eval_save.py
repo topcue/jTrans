@@ -21,6 +21,7 @@ from datautils.playdata import DatasetBase as DatasetBase
 import re
 from datetime import datetime
 
+
 WANDB = True
 
 NUM_JOBS = os.cpu_count()
@@ -32,13 +33,35 @@ class BinBertModel(BertModel):
 		self.embeddings.position_embeddings = self.embeddings.word_embeddings
 
 
-def get_logger(name):
-	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename=name)
-	logger = logging.getLogger(__name__)
-	s_handle = logging.StreamHandler(sys.stdout)
-	s_handle.setLevel(logging.INFO)
-	s_handle.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s"))
-	logger.addHandler(s_handle)
+def make_log_path(output_emb_path: str, tim: str) -> str:
+	base = os.path.basename(output_emb_path)
+	emb_stem, _ = os.path.splitext(base)
+	os.makedirs("logs", exist_ok=True)
+	return os.path.join("logs", f"{tim}_{emb_stem}_{os.getpid()}.log")
+
+
+def get_logger(log_path: str):
+	logger = logging.getLogger("jtrans")
+	logger.setLevel(logging.INFO)
+
+	if logger.handlers:
+		return logger
+
+	fmt_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	fmt_console = logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s")
+
+	fh = logging.FileHandler(log_path)
+	fh.setLevel(logging.INFO)
+	fh.setFormatter(fmt_file)
+
+	ch = logging.StreamHandler(sys.stdout)
+	ch.setLevel(logging.INFO)
+	ch.setFormatter(fmt_console)
+
+	logger.addHandler(fh)
+	logger.addHandler(ch)
+	logger.propagate = False
+
 	return logger
 
 
@@ -116,7 +139,7 @@ def finetune_eval(net, data_loader):
 		return np.mean(np.array(avg))
 
 
-if __name__ == '__main__':
+def main():
 	parser = argparse.ArgumentParser(description="jTrans-EvalSave")
 	parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
 	parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
@@ -136,11 +159,16 @@ if __name__ == '__main__':
 	TIMESTAMP = "%Y%m%d%H%M"
 	tim = now.strftime(TIMESTAMP)
 
-	# logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.output_emb_path}_{tim}")
-	os.makedirs("logs", exist_ok=True)
-	raw = f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.output_emb_path}_{tim}"
-	safe = re.sub(r"[^A-Za-z0-9._-]+", "_", raw)
-	logger = get_logger(os.path.join("logs", safe + ".log"))
+	log_path = make_log_path(args.output_emb_path, tim)
+	logger = get_logger(log_path)
+
+	logger.info("================ run config ================")
+	logger.info(f"model_path     : {args.model_path}")
+	logger.info(f"dataset_path   : {args.dataset_path}")
+	logger.info(f"output_emb_path: {args.output_emb_path}")
+	logger.info(f"tokenizer      : {args.tokenizer}")
+	logger.info(f"device         : {args.device}")
+	logger.info("============================================")
 
 	logger.info(f"Loading Pretrained Model from {args.model_path} ...")
 	model = BinBertModel.from_pretrained(args.model_path)
@@ -175,5 +203,8 @@ if __name__ == '__main__':
 	fi = open(args.output_emb_path, 'wb')
 	pickle.dump(ft_valid_dataset.ebds, fi)
 	fi.close()
+
+if __name__ == '__main__':
+	main()
 
 # EOF
