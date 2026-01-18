@@ -23,6 +23,7 @@ from datetime import datetime
 
 WANDB = True
 
+NUM_JOBS = 32
 
 class BinBertModel(BertModel):
 	def __init__(self, config, add_pooling_layer=True):
@@ -49,7 +50,7 @@ def eval(model, args, valid_set, logger):
 	device = torch.device("cuda")
 	model.to(device)
 	logger.info("Finished Initialization...")
-	valid_dataloader = DataLoader(valid_set, batch_size=args.eval_batch_size, num_workers=24, shuffle=True)
+	valid_dataloader = DataLoader(valid_set, batch_size=args.eval_batch_size, num_workers=NUM_JOBS, shuffle=True)
 	global_steps = 0
 	etc = 0
 	logger.info(f"Doing Evaluation ...")

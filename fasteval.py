@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 
+NUM_JOBS = 32
 
 class FunctionDataset_Fast(torch.utils.data.Dataset):
 	def __init__(self, arr1, arr2):
@@ -38,7 +39,7 @@ def eval_O(ebds, TYPE1, TYPE2):
 			continue
 
 	ft_valid_dataset = FunctionDataset_Fast(funcarr1, funcarr2)
-	dataloader = DataLoader(ft_valid_dataset, batch_size=POOLSIZE, num_workers=24, shuffle=True)
+	dataloader = DataLoader(ft_valid_dataset, batch_size=POOLSIZE, num_workers=NUM_JOBS, shuffle=True)
 	SIMS = []
 	Recall_AT_1 = []
 
@@ -60,7 +61,7 @@ def eval_O(ebds, TYPE1, TYPE2):
 				else:
 					Recall_AT_1.append(0)
 				SIMS.append(1.0 / posi)
-	print(TYPE1, TYPE2, 'MRR{}: '.format(POOLSIZE),np.array(SIMS).mean())
+	print(TYPE1, TYPE2, 'MRR{}: '.format(POOLSIZE), np.array(SIMS).mean())
 	print(TYPE1, TYPE2, 'Recall@1: ', np.array(Recall_AT_1).mean())
 	return np.array(Recall_AT_1).mean()
 
@@ -73,6 +74,7 @@ def main():
 	args = parser.parse_args()
 
 	device = torch.device(args.device)
+    #! Pool size defines the retrieval evaluation difficulty and directly affects metrics.
 	POOLSIZE = args.poolsize
 	ff = open(args.experiment_path,'rb')
 	ebds = pickle.load(ff)
