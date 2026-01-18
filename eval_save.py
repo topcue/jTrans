@@ -18,6 +18,7 @@ import sys
 import time
 import data
 from datautils.playdata import DatasetBase as DatasetBase
+import re
 
 
 WANDB = True
@@ -113,15 +114,13 @@ def finetune_eval(net, data_loader):
 		return np.mean(np.array(avg))
 
 
-
-
-
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="jTrans-EvalSave")
 	parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
 	parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
 	parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="Path to the experiment")
 	parser.add_argument("--tokenizer", type=str, default='./jtrans_tokenizer/')
+	parser.add_argument("--device", type=str, default="cpu")
 
 	args = parser.parse_args()
 
@@ -129,12 +128,19 @@ if __name__ == '__main__':
 	now = datetime.now() # current date and time
 	TIMESTAMP="%Y%m%d%H%M"
 	tim = now.strftime(TIMESTAMP)
-	logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}")
+
+	# logger = get_logger(f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}")
+	os.makedirs("logs", exist_ok=True)
+	raw = f"jTrans-{args.model_path}-eval-{args.dataset_path}_savename_{args.experiment_path}_{tim}"
+	safe = re.sub(r"[^A-Za-z0-9._-]+", "_", raw)
+	logger = get_logger(os.path.join("logs", safe + ".log"))
+
 	logger.info(f"Loading Pretrained Model from {args.model_path} ...")
 	model = BinBertModel.from_pretrained(args.model_path)
 
 	model.eval()
-	device = torch.device("cuda")
+	
+	device = torch.device(args.device)
 	model.to(device)
 
 	logger.info("Done ...")
@@ -151,7 +157,9 @@ if __name__ == '__main__':
 				ret1=tokenizer([pairs[idx]], add_special_tokens=True,max_length=512,padding='max_length',truncation=True,return_tensors='pt') #tokenize them
 				seq1=ret1['input_ids']
 				mask1=ret1['attention_mask']
-				input_ids1, attention_mask1= seq1.cuda(),mask1.cuda()
+				# input_ids1, attention_mask1= seq1.cuda(),mask1.cuda()
+				input_ids1, attention_mask1 = seq1.to(device), mask1.to(device)
+				
 				output=model(input_ids=input_ids1,attention_mask=attention_mask1)
 				anchor=output.pooler_output
 				ft_valid_dataset.ebds[i][j]=anchor.detach().cpu()
