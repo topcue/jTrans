@@ -17,7 +17,18 @@ import logging
 import sys
 import time
 import data
+from datautils.playdata import DatasetBase as DatasetBase
+
+
 WANDB = True
+
+
+class BinBertModel(BertModel):
+	def __init__(self, config, add_pooling_layer=True):
+		super().__init__(config)
+		self.config = config
+		self.embeddings.position_embeddings=self.embeddings.word_embeddings
+
 
 def get_logger(name):
 	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename=name)
@@ -28,8 +39,8 @@ def get_logger(name):
 	logger.addHandler(s_handle)
 	return logger
 
-def eval(model, args, valid_set, logger):
 
+def eval(model, args, valid_set, logger):
 	if WANDB:
 		wandb.init(project=f'jTrans-finetune')
 		wandb.config.update(args)
@@ -47,6 +58,7 @@ def eval(model, args, valid_set, logger):
 		wandb.log({
 					'mrr': mrr
 				})
+
 
 def finetune_eval(net, data_loader):
 	net.eval()
@@ -99,15 +111,12 @@ def finetune_eval(net, data_loader):
 		print("FINAL MRR ",np.mean(np.array(avg)))
 		fi.close()
 		return np.mean(np.array(avg))
-class BinBertModel(BertModel):
-	def __init__(self, config, add_pooling_layer=True):
-		super().__init__(config)
-		self.config = config
-		self.embeddings.position_embeddings=self.embeddings.word_embeddings
-from datautils.playdata import DatasetBase as DatasetBase
+
+
+
+
 
 if __name__ == '__main__':
-
 	parser = argparse.ArgumentParser(description="jTrans-EvalSave")
 	parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
 	parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
@@ -152,3 +161,4 @@ if __name__ == '__main__':
 	pickle.dump(ft_valid_dataset.ebds,fi)
 	fi.close()
 
+# EOF
