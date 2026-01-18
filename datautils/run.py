@@ -43,9 +43,17 @@ def getTarget(path):
 	return target
 
 
-def run_ida(cmd, out_path, err_path):
-	with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
-		return subprocess.call(cmd, stdout=out_f, stderr=err_f)
+def run_ida(cmd, out_path=None, err_path=None, debug=False):
+    if debug:
+        with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
+            return subprocess.call(cmd, stdout=out_f, stderr=err_f)
+    else:
+        # Discard stdout/stderr
+        return subprocess.call(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
 #! WSL: pip install networkx tqdm
 def main():
