@@ -13,6 +13,6 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 python -m pip install simpletransformers networkx pyelftools
 
 # for ida
-python -m pip install binaryai
+# python -m pip install binaryai
 
 # EOF
