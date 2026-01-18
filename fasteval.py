@@ -49,7 +49,7 @@ def eval_O(ebds, TYPE1, TYPE2, device, POOLSIZE=32):
 		if anchor.shape[0] == POOLSIZE:
 			for i in range(len(anchor)):    # check every vector of (vA, vB)
 				vA = anchor[i:i+1]  # pos[i]
-				sim = np.array(torch.mm(vA, pos.T).cpu().squeeze())
+				sim = np.asarray(torch.mm(vA, pos.T).cpu()).squeeze()
 				y = np.argsort(-sim)
 				posi = 0
 				for j in range(len(pos)):
