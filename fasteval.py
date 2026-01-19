@@ -12,93 +12,93 @@ import argparse
 NUM_JOBS = os.cpu_count()
 
 class FunctionDataset_Fast(torch.utils.data.Dataset):
-	def __init__(self, arr1, arr2):
-		self.arr1 = arr1
-		self.arr2 = arr2
-		assert(len(arr1) == len(arr2))
+    def __init__(self, arr1, arr2):
+        self.arr1 = arr1
+        self.arr2 = arr2
+        assert(len(arr1) == len(arr2))
 
-	def __getitem__(self, idx):
-		return self.arr1[idx].squeeze(0), self.arr2[idx].squeeze(0)
+    def __getitem__(self, idx):
+        return self.arr1[idx].squeeze(0), self.arr2[idx].squeeze(0)
 
 
-	def __len__(self):
-		return len(self.arr1)
+    def __len__(self):
+        return len(self.arr1)
 
 
 def eval_O(ebds, TYPE1, TYPE2, device, POOLSIZE=32):
-	funcarr1 = []
-	funcarr2 = []
+    funcarr1 = []
+    funcarr2 = []
 
-	for i in range(len(ebds)):
-		if ebds[i].get(TYPE1) is not None and type(ebds[i][TYPE1]) is not int:
-			if ebds[i].get(TYPE2) is not None and type(ebds[i][TYPE2]) is not int:
-				ebd1, ebd2 = ebds[i][TYPE1], ebds[i][TYPE2]
-				funcarr1.append(ebd1 / ebd1.norm())
-				funcarr2.append(ebd2 / ebd2.norm())
-		else:
-			continue
+    for i in range(len(ebds)):
+        if ebds[i].get(TYPE1) is not None and type(ebds[i][TYPE1]) is not int:
+            if ebds[i].get(TYPE2) is not None and type(ebds[i][TYPE2]) is not int:
+                ebd1, ebd2 = ebds[i][TYPE1], ebds[i][TYPE2]
+                funcarr1.append(ebd1 / ebd1.norm())
+                funcarr2.append(ebd2 / ebd2.norm())
+        else:
+            continue
 
-	ft_valid_dataset = FunctionDataset_Fast(funcarr1, funcarr2)
-	dataloader = DataLoader(ft_valid_dataset, batch_size=POOLSIZE, num_workers=NUM_JOBS, shuffle=True)
-	SIMS = []
-	Recall_AT_1 = []
+    ft_valid_dataset = FunctionDataset_Fast(funcarr1, funcarr2)
+    dataloader = DataLoader(ft_valid_dataset, batch_size=POOLSIZE, num_workers=NUM_JOBS, shuffle=True)
+    SIMS = []
+    Recall_AT_1 = []
 
-	for idx, (anchor,pos) in enumerate(tqdm(dataloader)):
-		anchor = anchor.to(device)
-		pos = pos.to(device)
-		if anchor.shape[0] == POOLSIZE:
-			for i in range(len(anchor)):    # check every vector of (vA, vB)
-				vA = anchor[i:i+1]  # pos[i]
-				sim = np.asarray(torch.mm(vA, pos.T).cpu()).squeeze()
-				y = np.argsort(-sim)
-				posi = 0
-				for j in range(len(pos)):
-					if y[j] == i:
-						posi = j+1
-						break
-				if posi == 1:
-					Recall_AT_1.append(1)
-				else:
-					Recall_AT_1.append(0)
-				SIMS.append(1.0 / posi)
+    for idx, (anchor,pos) in enumerate(tqdm(dataloader)):
+        anchor = anchor.to(device)
+        pos = pos.to(device)
+        if anchor.shape[0] == POOLSIZE:
+            for i in range(len(anchor)):    # check every vector of (vA, vB)
+                vA = anchor[i:i+1]  # pos[i]
+                sim = np.asarray(torch.mm(vA, pos.T).cpu()).squeeze()
+                y = np.argsort(-sim)
+                posi = 0
+                for j in range(len(pos)):
+                    if y[j] == i:
+                        posi = j+1
+                        break
+                if posi == 1:
+                    Recall_AT_1.append(1)
+                else:
+                    Recall_AT_1.append(0)
+                SIMS.append(1.0 / posi)
 
-	print(TYPE1, TYPE2, 'MRR{}: '.format(POOLSIZE), np.array(SIMS).mean())
-	print(TYPE1, TYPE2, 'Recall@1: ', np.array(Recall_AT_1).mean())
-	return np.array(Recall_AT_1).mean()
+    print(TYPE1, TYPE2, 'MRR{}: '.format(POOLSIZE), np.array(SIMS).mean())
+    print(TYPE1, TYPE2, 'Recall@1: ', np.array(Recall_AT_1).mean())
+    return np.array(Recall_AT_1).mean()
 
 
 def main():
-	parser = argparse.ArgumentParser(description="jTrans-FastEval")
-	# parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="experiment to be evaluated")
-	parser.add_argument(
-		"--input_emb_path",
-		type=str,
-		default="./experiments/BinaryCorp-3M/jTrans.pkl",
-		help="Input path to a pickle file containing precomputed function embeddings (ebds), produced by eval_save.py."
-	)
-	parser.add_argument("--poolsize", type=int, default=32, help="size of the function pool")
-	parser.add_argument("--device", type=str, default="cpu")
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="jTrans-FastEval")
+    # parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="experiment to be evaluated")
+    parser.add_argument(
+        "--input_emb_path",
+        type=str,
+        default="./experiments/BinaryCorp-3M/jTrans.pkl",
+        help="Input path to a pickle file containing precomputed function embeddings (ebds), produced by eval_save.py."
+    )
+    parser.add_argument("--poolsize", type=int, default=32, help="size of the function pool")
+    parser.add_argument("--device", type=str, default="cpu")
+    args = parser.parse_args()
 
-	device = torch.device(args.device)
-	#! Pool size defines the retrieval evaluation difficulty and directly affects metrics.
-	POOLSIZE = args.poolsize
-	ff = open(args.input_emb_path,'rb')
-	ebds = pickle.load(ff)
-	ff.close()
+    device = torch.device(args.device)
+    #! Pool size defines the retrieval evaluation difficulty and directly affects metrics.
+    POOLSIZE = args.poolsize
+    ff = open(args.input_emb_path,'rb')
+    ebds = pickle.load(ff)
+    ff.close()
 
-	print(f'evaluating... poolsize={POOLSIZE}')
+    print(f'evaluating... poolsize={POOLSIZE}')
 
-	eval_O(ebds, 'O0', 'O3', device, POOLSIZE)
-	eval_O(ebds, 'O0', 'Os', device, POOLSIZE)
-	eval_O(ebds, 'O1', 'Os', device, POOLSIZE)
-	eval_O(ebds, 'O1', 'O3', device, POOLSIZE)
-	eval_O(ebds, 'O2', 'Os', device, POOLSIZE)
-	eval_O(ebds, 'O2', 'O3', device, POOLSIZE)
+    eval_O(ebds, 'O0', 'O3', device, POOLSIZE)
+    eval_O(ebds, 'O0', 'Os', device, POOLSIZE)
+    eval_O(ebds, 'O1', 'Os', device, POOLSIZE)
+    eval_O(ebds, 'O1', 'O3', device, POOLSIZE)
+    eval_O(ebds, 'O2', 'Os', device, POOLSIZE)
+    eval_O(ebds, 'O2', 'O3', device, POOLSIZE)
 
 
 if __name__ == '__main__':
-	main()
+    main()
 
 
 # EOF

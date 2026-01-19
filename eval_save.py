@@ -27,184 +27,184 @@ WANDB = True
 NUM_JOBS = os.cpu_count()
 
 class BinBertModel(BertModel):
-	def __init__(self, config, add_pooling_layer=True):
-		super().__init__(config)
-		self.config = config
-		self.embeddings.position_embeddings = self.embeddings.word_embeddings
+    def __init__(self, config, add_pooling_layer=True):
+        super().__init__(config)
+        self.config = config
+        self.embeddings.position_embeddings = self.embeddings.word_embeddings
 
 
 def make_log_path(output_emb_path: str, tim: str) -> str:
-	base = os.path.basename(output_emb_path)
-	emb_stem, _ = os.path.splitext(base)
-	os.makedirs("logs", exist_ok=True)
-	return os.path.join("logs", f"{tim}_{emb_stem}_{os.getpid()}.log")
+    base = os.path.basename(output_emb_path)
+    emb_stem, _ = os.path.splitext(base)
+    os.makedirs("logs", exist_ok=True)
+    return os.path.join("logs", f"{tim}_{emb_stem}_{os.getpid()}.log")
 
 
 def get_logger(log_path: str):
-	logger = logging.getLogger("jtrans")
-	logger.setLevel(logging.INFO)
+    logger = logging.getLogger("jtrans")
+    logger.setLevel(logging.INFO)
 
-	if logger.handlers:
-		return logger
+    if logger.handlers:
+        return logger
 
-	fmt_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-	fmt_console = logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s")
+    fmt_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fmt_console = logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s")
 
-	fh = logging.FileHandler(log_path)
-	fh.setLevel(logging.INFO)
-	fh.setFormatter(fmt_file)
+    fh = logging.FileHandler(log_path)
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(fmt_file)
 
-	ch = logging.StreamHandler(sys.stdout)
-	ch.setLevel(logging.INFO)
-	ch.setFormatter(fmt_console)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(fmt_console)
 
-	logger.addHandler(fh)
-	logger.addHandler(ch)
-	logger.propagate = False
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    logger.propagate = False
 
-	return logger
+    return logger
 
 
 def eval(model, args, valid_set, logger):
-	if WANDB:
-		wandb.init(project=f'jTrans-finetune')
-		wandb.config.update(args)
-	logger.info("Initializing Model...")
-	device = torch.device("cuda")
-	model.to(device)
-	logger.info("Finished Initialization...")
-	valid_dataloader = DataLoader(valid_set, batch_size=args.eval_batch_size, num_workers=NUM_JOBS, shuffle=True)
-	global_steps = 0
-	etc = 0
-	logger.info(f"Doing Evaluation ...")
-	mrr = finetune_eval(model, valid_dataloader)
-	logger.info(f"Evaluate: mrr={mrr}")
-	if WANDB:
-		wandb.log({
-					'mrr': mrr
-				})
+    if WANDB:
+        wandb.init(project=f'jTrans-finetune')
+        wandb.config.update(args)
+    logger.info("Initializing Model...")
+    device = torch.device("cuda")
+    model.to(device)
+    logger.info("Finished Initialization...")
+    valid_dataloader = DataLoader(valid_set, batch_size=args.eval_batch_size, num_workers=NUM_JOBS, shuffle=True)
+    global_steps = 0
+    etc = 0
+    logger.info(f"Doing Evaluation ...")
+    mrr = finetune_eval(model, valid_dataloader)
+    logger.info(f"Evaluate: mrr={mrr}")
+    if WANDB:
+        wandb.log({
+                    'mrr': mrr
+                })
 
 
 def finetune_eval(net, data_loader):
-	net.eval()
-	print(net)
-	with torch.no_grad():
-		avg = []
-		gt = []
-		cons = []
-		eval_iterator = tqdm(data_loader)
-		for i, (seq1, seq2, seq3, mask1, mask2, mask3) in enumerate(eval_iterator):
-				input_ids1, attention_mask1= seq1.cuda(), mask1.cuda()
-				input_ids2, attention_mask2= seq2.cuda(), mask2.cuda()
-				print(input_ids1.shape)
-				print(attention_mask1.shape)
-				anchor, pos = 0, 0
+    net.eval()
+    print(net)
+    with torch.no_grad():
+        avg = []
+        gt = []
+        cons = []
+        eval_iterator = tqdm(data_loader)
+        for i, (seq1, seq2, seq3, mask1, mask2, mask3) in enumerate(eval_iterator):
+                input_ids1, attention_mask1= seq1.cuda(), mask1.cuda()
+                input_ids2, attention_mask2= seq2.cuda(), mask2.cuda()
+                print(input_ids1.shape)
+                print(attention_mask1.shape)
+                anchor, pos = 0, 0
 
-				output = net(input_ids=input_ids1, attention_mask=attention_mask1)
-				# anchor = output.last_hidden_state[:, 0:1, :]
-				anchor = output.pooler_output
-				output = net(input_ids=input_ids2, attention_mask=attention_mask2)
-				# pos = output.last_hidden_state[:, 0:1, :]
-				pos = output.pooler_output
-				ans = 0
-				for k in range(len(anchor)):    # check every vector of (vA, vB)
-					vA = anchor[k:k+1].cpu()
-					sim = []
-					for j in range(len(pos)):
-						vB = pos[j:j+1].cpu()
-						# vB = vB[0]
-						AB_sim = F.cosine_similarity(vA, vB).item()
-						sim.append(AB_sim)
-						if j!= k:
-							cons.append(AB_sim)
-					sim = np.array(sim)
-					y = np.argsort(-sim)
-					posi = 0
-					for j in range(len(pos)):
-						if y[j] == k:
-							posi = j+1
+                output = net(input_ids=input_ids1, attention_mask=attention_mask1)
+                # anchor = output.last_hidden_state[:, 0:1, :]
+                anchor = output.pooler_output
+                output = net(input_ids=input_ids2, attention_mask=attention_mask2)
+                # pos = output.last_hidden_state[:, 0:1, :]
+                pos = output.pooler_output
+                ans = 0
+                for k in range(len(anchor)):    # check every vector of (vA, vB)
+                    vA = anchor[k:k+1].cpu()
+                    sim = []
+                    for j in range(len(pos)):
+                        vB = pos[j:j+1].cpu()
+                        # vB = vB[0]
+                        AB_sim = F.cosine_similarity(vA, vB).item()
+                        sim.append(AB_sim)
+                        if j!= k:
+                            cons.append(AB_sim)
+                    sim = np.array(sim)
+                    y = np.argsort(-sim)
+                    posi = 0
+                    for j in range(len(pos)):
+                        if y[j] == k:
+                            posi = j+1
 
-					gt.append(sim[k])
+                    gt.append(sim[k])
 
-					ans += 1 / posi
+                    ans += 1 / posi
 
-				ans = ans / len(anchor)
-				avg.append(ans)
-				print("now mrr ", np.mean(np.array(avg)))
-		fi = open("logft.txt", "a")
-		print("MRR ", np.mean(np.array(avg)), file=fi)
-		print("FINAL MRR ", np.mean(np.array(avg)))
-		fi.close()
+                ans = ans / len(anchor)
+                avg.append(ans)
+                print("now mrr ", np.mean(np.array(avg)))
+        fi = open("logft.txt", "a")
+        print("MRR ", np.mean(np.array(avg)), file=fi)
+        print("FINAL MRR ", np.mean(np.array(avg)))
+        fi.close()
 
-		return np.mean(np.array(avg))
+        return np.mean(np.array(avg))
 
 
 def main():
-	parser = argparse.ArgumentParser(description="jTrans-EvalSave")
-	parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
-	parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
-	# parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="Path to the experiment")
-	parser.add_argument(
-		"--output_emb_path",
-		type=str,
-		default="./experiments/BinaryCorp-3M/jTrans.pkl",
-		help="Output path to save precomputed function embeddings (pickle). This file is later consumed by fasteval.py."
-	)
-	parser.add_argument("--tokenizer", type=str, default='./jtrans_tokenizer/')
-	parser.add_argument("--device", type=str, default="cpu")
+    parser = argparse.ArgumentParser(description="jTrans-EvalSave")
+    parser.add_argument("--model_path", type=str, default='./models/jTrans-finetune', help="Path to the model")
+    parser.add_argument("--dataset_path", type=str, default='./BinaryCorp/small_test', help="Path to the dataset")
+    # parser.add_argument("--experiment_path", type=str, default='./experiments/BinaryCorp-3M/jTrans.pkl', help="Path to the experiment")
+    parser.add_argument(
+        "--output_emb_path",
+        type=str,
+        default="./experiments/BinaryCorp-3M/jTrans.pkl",
+        help="Output path to save precomputed function embeddings (pickle). This file is later consumed by fasteval.py."
+    )
+    parser.add_argument("--tokenizer", type=str, default='./jtrans_tokenizer/')
+    parser.add_argument("--device", type=str, default="cpu")
 
-	args = parser.parse_args()
+    args = parser.parse_args()
 
-	now = datetime.now() # current date and time
-	TIMESTAMP = "%Y%m%d%H%M"
-	tim = now.strftime(TIMESTAMP)
+    now = datetime.now() # current date and time
+    TIMESTAMP = "%Y%m%d%H%M"
+    tim = now.strftime(TIMESTAMP)
 
-	log_path = make_log_path(args.output_emb_path, tim)
-	logger = get_logger(log_path)
+    log_path = make_log_path(args.output_emb_path, tim)
+    logger = get_logger(log_path)
 
-	logger.info("================ run config ================")
-	logger.info(f"model_path     : {args.model_path}")
-	logger.info(f"dataset_path   : {args.dataset_path}")
-	logger.info(f"output_emb_path: {args.output_emb_path}")
-	logger.info(f"tokenizer      : {args.tokenizer}")
-	logger.info(f"device         : {args.device}")
-	logger.info("============================================")
+    logger.info("================ run config ================")
+    logger.info(f"model_path     : {args.model_path}")
+    logger.info(f"dataset_path   : {args.dataset_path}")
+    logger.info(f"output_emb_path: {args.output_emb_path}")
+    logger.info(f"tokenizer      : {args.tokenizer}")
+    logger.info(f"device         : {args.device}")
+    logger.info("============================================")
 
-	logger.info(f"Loading Pretrained Model from {args.model_path} ...")
-	model = BinBertModel.from_pretrained(args.model_path)
+    logger.info(f"Loading Pretrained Model from {args.model_path} ...")
+    model = BinBertModel.from_pretrained(args.model_path)
 
-	model.eval()
+    model.eval()
 
-	device = torch.device(args.device)
-	model.to(device)
+    device = torch.device(args.device)
+    model.to(device)
 
-	logger.info("Done ...")
-	tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
-	logger.info("Tokenizer Done ...")
+    logger.info("Done ...")
+    tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
+    logger.info("Tokenizer Done ...")
 
-	logger.info("Preparing Datasets ...")
-	ft_valid_dataset = FunctionDataset_CL(tokenizer, args.dataset_path, None, True, opt=['O0', 'O1', 'O2', 'O3', 'Os'], add_ebd=True, convert_jump_addr=True)
-	for i in tqdm(range(len(ft_valid_dataset.datas))):
-		pairs = ft_valid_dataset.datas[i]
-		for j in ['O0', 'O1', 'O2', 'O3', 'Os']:
-			if ft_valid_dataset.ebds[i].get(j) is not None:
-				idx = ft_valid_dataset.ebds[i][j]
-				ret1 = tokenizer([pairs[idx]], add_special_tokens=True, max_length=512, padding='max_length', truncation=True, return_tensors='pt') # tokenize them
-				seq1 = ret1['input_ids']
-				mask1 = ret1['attention_mask']
-				# input_ids1, attention_mask1 = seq1.cuda(), mask1.cuda()
-				input_ids1, attention_mask1 = seq1.to(device), mask1.to(device)
+    logger.info("Preparing Datasets ...")
+    ft_valid_dataset = FunctionDataset_CL(tokenizer, args.dataset_path, None, True, opt=['O0', 'O1', 'O2', 'O3', 'Os'], add_ebd=True, convert_jump_addr=True)
+    for i in tqdm(range(len(ft_valid_dataset.datas))):
+        pairs = ft_valid_dataset.datas[i]
+        for j in ['O0', 'O1', 'O2', 'O3', 'Os']:
+            if ft_valid_dataset.ebds[i].get(j) is not None:
+                idx = ft_valid_dataset.ebds[i][j]
+                ret1 = tokenizer([pairs[idx]], add_special_tokens=True, max_length=512, padding='max_length', truncation=True, return_tensors='pt') # tokenize them
+                seq1 = ret1['input_ids']
+                mask1 = ret1['attention_mask']
+                # input_ids1, attention_mask1 = seq1.cuda(), mask1.cuda()
+                input_ids1, attention_mask1 = seq1.to(device), mask1.to(device)
 
-				output = model(input_ids=input_ids1, attention_mask=attention_mask1)
-				anchor = output.pooler_output
-				ft_valid_dataset.ebds[i][j] = anchor.detach().cpu()
+                output = model(input_ids=input_ids1, attention_mask=attention_mask1)
+                anchor = output.pooler_output
+                ft_valid_dataset.ebds[i][j] = anchor.detach().cpu()
 
-	logger.info("ebds start writing")
-	fi = open(args.output_emb_path, 'wb')
-	pickle.dump(ft_valid_dataset.ebds, fi)
-	fi.close()
+    logger.info("ebds start writing")
+    fi = open(args.output_emb_path, 'wb')
+    pickle.dump(ft_valid_dataset.ebds, fi)
+    fi.close()
 
 if __name__ == '__main__':
-	main()
+    main()
 
 # EOF
