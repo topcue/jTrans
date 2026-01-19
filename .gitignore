@@ -9,6 +9,9 @@ datautils/log
 log
 logs
 
+input
+output
+
 datautils/__pycache__/
 __pycache__/
 
