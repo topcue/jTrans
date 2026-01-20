@@ -1,6 +1,7 @@
 import sys
 
 PROJECT_NAME = "jtrans"
+# PROJECT_NAME = "optango"
 
 def setup_ida_sys_path():
     # Add any extra paths needed by IDA python (example: your site-packages)
