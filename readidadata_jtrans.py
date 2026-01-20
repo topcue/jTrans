@@ -1,3 +1,5 @@
+#! for jTrans
+
 import pickle
 import networkx
 import time

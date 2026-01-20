@@ -1,7 +1,7 @@
 import pickle
 import re
 import os
-import readidadata
+import readidadata_jtrans
 
 def tokenizer():
     with open('token_ida.pkl','rb') as f:
@@ -58,7 +58,7 @@ def save_tokens(prefixs):
             fii.close()
             for bbid,addr,bb in asm_seq:
                     for addr,instructions in bb:
-                        operator,operand1,operand2,operand3,annotation=readidadata.parse_asm(instructions)
+                        operator,operand1,operand2,operand3,annotation=readidadata_jtrans.parse_asm(instructions)
                         if operator!=None:
                             if token_id.get(operator)==None:
                                 print(operator,cnts," from ",hex(addr),instructions)

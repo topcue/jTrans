@@ -8,7 +8,7 @@ from tqdm import tqdm
 import pickle
 import argparse
 import re
-import readidadata
+import readidadata_jtrans
 import torch
 import random
 import time
@@ -46,7 +46,7 @@ def gen_funcstr(f,convert_jump):
         asm=cfg.nodes[bb]['asm']
         map_id[bb]=len(code_lst)
         for code in asm:
-            operator,operand1,operand2,operand3,annotation=readidadata.parse_asm(code)
+            operator,operand1,operand2,operand3,annotation=readidadata_jtrans.parse_asm(code)
             code_lst.append(operator)
             if operand1!=None:
                 code_lst.append(operand1)
